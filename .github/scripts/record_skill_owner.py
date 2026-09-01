@@ -12,19 +12,15 @@ Registry schema:
       "repos": [
         {
           "repo": "AMD-AGI/TraceLens",       # owner/repo, unique per entry
-          "status": "tech-preview" | "ga",   # product status at approval time
           "engineering_owner": "octocat",    # GitHub handle, no leading @
           "product_manager": "octocat",      # GitHub handle, no leading @
-          "approved_in": "<approval issue URL>",
-          "approved_at": "2026-09-01T17:04:22Z"
         }
       ]
     }
 
 Entries are keyed on `repo` and kept sorted by it. Approving a repo that is
-already listed updates the existing entry in place rather than adding a second
-one, so a re-approval after an ownership or status change reads as the current
-truth and `approved_at` moves to the later approval.
+already listed replaces the existing entry rather than adding a second one,
+so a re-approval after an ownership change reads as the current truth.
 """
 
 from __future__ import annotations
@@ -33,11 +29,9 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_PATTERN = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
-STATUSES = ("tech-preview", "ga")
 DEFAULT_REGISTRY = Path(__file__).resolve().parents[1] / "skill_owners.json"
 
 
@@ -68,16 +62,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--repo", required=True, help="Product repo as owner/repo.")
     parser.add_argument(
-        "--status", required=True, choices=STATUSES, help="Product status at approval time."
-    )
-    parser.add_argument(
         "--engineering-owner", required=True, help="GitHub handle of the engineering owner."
     )
     parser.add_argument(
         "--product-manager", required=True, help="GitHub handle of the product manager."
-    )
-    parser.add_argument(
-        "--issue", required=True, help="URL of the approval issue the sign-off happened on."
     )
     parser.add_argument(
         "--registry",
@@ -97,13 +85,10 @@ def main(argv: list[str] | None = None) -> int:
 
     entry = {
         "repo": repo,
-        "status": args.status,
         "engineering_owner": handle(args.engineering_owner),
         "product_manager": handle(args.product_manager),
-        "approved_in": args.issue.strip(),
-        "approved_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
-    for field in ("engineering_owner", "product_manager", "approved_in"):
+    for field in ("engineering_owner", "product_manager"):
         if not entry[field]:
             raise SystemExit(f"--{field.replace('_', '-')} cannot be empty.")
 
@@ -113,10 +98,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     if existing is None:
         registry["repos"].append(entry)
-        print(f"Added {repo} to {args.registry.name} ({entry['status']}).")
+        print(f"Added {repo} to {args.registry.name}.")
     else:
+        existing.clear()
         existing.update(entry)
-        print(f"Updated the existing {repo} entry in {args.registry.name} ({entry['status']}).")
+        print(f"Updated the existing {repo} entry in {args.registry.name}.")
 
     write_registry(args.registry, registry)
     return 0

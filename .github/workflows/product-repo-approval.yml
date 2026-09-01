@@ -283,7 +283,6 @@ jobs:
 
             core.setOutput("ready", "true");
             core.setOutput("product_repo", productRepo);
-            core.setOutput("status", status);
             core.setOutput("engineering_owner", engOwner);
             core.setOutput("product_manager", productManager);
 
@@ -298,18 +297,14 @@ jobs:
         if: steps.approval.outputs.ready == 'true'
         env:
           PRODUCT_REPO: ${{ steps.approval.outputs.product_repo }}
-          STATUS: ${{ steps.approval.outputs.status }}
           ENGINEERING_OWNER: ${{ steps.approval.outputs.engineering_owner }}
           PRODUCT_MANAGER: ${{ steps.approval.outputs.product_manager }}
-          ISSUE_URL: ${{ github.event.issue.html_url }}
         run: |
           uv run .github/scripts/record_skill_owner.py \
             --registry "$REGISTRY" \
             --repo "$PRODUCT_REPO" \
-            --status "$STATUS" \
             --engineering-owner "$ENGINEERING_OWNER" \
-            --product-manager "$PRODUCT_MANAGER" \
-            --issue "$ISSUE_URL"
+            --product-manager "$PRODUCT_MANAGER"
 
       # A pull request rather than a commit to main, so the entry gets the same
       # review as any other change to the catalog's registries. Re-approving
@@ -326,8 +321,8 @@ jobs:
           title: "Add `${{ steps.approval.outputs.product_repo }}` to the skill owners registry"
           body: |
             Approved on #${{ github.event.issue.number }} by
-            @${{ steps.approval.outputs.engineering_owner }} (engineering owner, owns the underlying product) and
-            @${{ steps.approval.outputs.product_manager }} (product manager, product is ${{ steps.approval.outputs.status }}).
+            @${{ steps.approval.outputs.engineering_owner }} (engineering owner) and
+            @${{ steps.approval.outputs.product_manager }} (product manager).
 
             Closes #${{ github.event.issue.number }}
 
