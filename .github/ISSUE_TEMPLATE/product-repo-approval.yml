@@ -7,15 +7,17 @@ body:
   - type: markdown
     attributes:
       value: |
-        File this **before** opening a catalog pull request. Two people have to sign off here:
+        File this **before** opening a catalog pull request. Both roles have to sign off here
+        (the same person can hold both):
 
         - the **engineering owner**, confirming they own the underlying product, and
         - the **product manager** for that product, confirming they are comfortable with
           the product repo backing these skills and that the product is in Tech Preview or GA.
 
-        Each of them signs off by leaving a comment containing `/approve` — say as much or as
-        little alongside it as you like. Approvals are recorded per person: nobody can approve
-        on someone else's behalf, and filing this issue is not an approval.
+        Each named account signs off by leaving a comment containing `/approve` — say as much
+        or as little alongside it as you like. Approvals are recorded per role: nobody can
+        approve on someone else's behalf, and filing this issue is not an approval. If one
+        person is named for both roles, a single `/approve` from that account records both.
 
         Once both have approved, a pull request is opened automatically adding this repo to
         `.github/skill_owners.json`. Merging that pull request closes this issue.

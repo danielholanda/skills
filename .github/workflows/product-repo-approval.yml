@@ -2,12 +2,12 @@ name: product-repo-approval
 
 # Turns a "Product repo approval" issue into a reviewable registry entry.
 #
-# Two people named on the issue sign off by commenting `/approve`: the
+# The two accounts named on the issue sign off by commenting `/approve`: the
 # engineering owner, who owns the underlying product, and the product manager,
 # who vouches for the product repo and for the product being in Tech Preview or
-# GA. This workflow only records approvals from those two accounts, so a
-# `/approve` from anyone else -- including whoever filed the issue -- does
-# nothing but get an explanation.
+# GA. Those can be the same person. This workflow only records approvals from
+# the named accounts, so a `/approve` from anyone else -- including whoever
+# filed the issue -- does nothing but get an explanation.
 #
 # Each approval is stored as a label on the issue rather than kept in this run,
 # so the second one can arrive days after the first and still complete the pair.
@@ -94,19 +94,6 @@ jobs:
               await github.rest.issues.createComment({
                 owner, repo, issue_number, body: comment_body,
               });
-            }
-
-            // Two approvals from one account would defeat the point of asking
-            // engineering and product separately.
-            if (sameHandle(engOwner, productManager)) {
-              core.info(`${engOwner} is named as both approvers; nothing recorded.`);
-              await comment(
-                `This issue names \`${engOwner}\` as both the engineering owner and the product manager, ` +
-                `so nothing was recorded. Those have to be two different people. Edit the issue with the right ` +
-                `handles, then have each of them comment \`/approve\`.`
-              );
-              core.setOutput("ready", "false");
-              return;
             }
 
             const roles = [];
