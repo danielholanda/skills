@@ -12,7 +12,6 @@ Registry schema:
       "repos": [
         {
           "repo": "AMD-AGI/TraceLens",       # owner/repo, unique per entry
-          "product": "TraceLens",            # customer-facing product name
           "status": "tech-preview" | "ga",   # product status at approval time
           "engineering_owner": "octocat",    # GitHub handle, no leading @
           "product_manager": "octocat",      # GitHub handle, no leading @
@@ -68,7 +67,6 @@ def write_registry(path: Path, data: dict) -> None:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--repo", required=True, help="Product repo as owner/repo.")
-    parser.add_argument("--product", required=True, help="Customer-facing product name.")
     parser.add_argument(
         "--status", required=True, choices=STATUSES, help="Product status at approval time."
     )
@@ -99,14 +97,13 @@ def main(argv: list[str] | None = None) -> int:
 
     entry = {
         "repo": repo,
-        "product": args.product.strip(),
         "status": args.status,
         "engineering_owner": handle(args.engineering_owner),
         "product_manager": handle(args.product_manager),
         "approved_in": args.issue.strip(),
         "approved_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
-    for field in ("product", "engineering_owner", "product_manager", "approved_in"):
+    for field in ("engineering_owner", "product_manager", "approved_in"):
         if not entry[field]:
             raise SystemExit(f"--{field.replace('_', '-')} cannot be empty.")
 

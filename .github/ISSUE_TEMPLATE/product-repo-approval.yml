@@ -7,29 +7,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        File this **before** opening a catalog pull request. Both roles have to sign off here
-        (the same person can hold both):
-
-        - the **engineering owner**, confirming they own the underlying product, and
-        - the **product manager** for that product, confirming they are comfortable with
-          the product repo backing these skills and that the product is in Tech Preview or GA.
-
-        Each named account signs off by leaving a comment containing `/approve` — say as much
-        or as little alongside it as you like. Approvals are recorded per role: nobody can
-        approve on someone else's behalf, and filing this issue is not an approval. If one
-        person is named for both roles, a single `/approve` from that account records both.
+        File this **before** opening a catalog pull request. A bot comment will tell
+        the named engineering owner and product manager what `/approve` signs and how
+        to leave it. The same person can hold both roles.
 
         Once both have approved, a pull request is opened automatically adding this repo to
         `.github/skill_owners.json`. Merging that pull request closes this issue.
-
-  - type: input
-    id: product
-    attributes:
-      label: Product name
-      description: The product as it is known to customers, not the repo name.
-      placeholder: e.g. TraceLens
-    validations:
-      required: true
 
   - type: input
     id: repo
@@ -37,16 +20,6 @@ body:
       label: Product repo
       description: The AMD-owned repo that holds the skills, as `owner/repo`. This is the repo being approved.
       placeholder: e.g. AMD-AGI/TraceLens
-    validations:
-      required: true
-
-  - type: textarea
-    id: skills
-    attributes:
-      label: Skills to add
-      description: One per line, as the catalog will name them. Rough names are fine if they are not settled yet.
-      placeholder: |
-        tracelens-analysis-orchestrator
     validations:
       required: true
 
