@@ -4,16 +4,6 @@ title: "[Product repo approval] <owner/repo>"
 labels:
   - product-repo-approval
 body:
-  - type: markdown
-    attributes:
-      value: |
-        File this **before** opening a catalog pull request. A bot comment will tell
-        the named engineering owner and product manager what `/approve` signs and how
-        to leave it. The same person can hold both roles.
-
-        Once both have approved, a pull request is opened automatically adding this repo to
-        `.github/skill_owners.json`. Merging that pull request closes this issue.
-
   - type: input
     id: repo
     attributes:
