@@ -1,3 +1,9 @@
 {
-  "repos": []
+  "repos": [
+    {
+      "repo": "rocm/super",
+      "engineering_owner": "danielholanda",
+      "product_release_owner": "danielholanda"
+    }
+  ]
 }
