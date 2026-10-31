@@ -22,7 +22,7 @@ section that has STANDALONE / COMPARATIVE variants. Delete the unused variant.
     Standalone efficiency semantics: % of roofline (unchanged).
 
 === GENERAL RULES ===
-1. Warnings section: Only include if there were errors or high-variance operations; omit entirely if all succeeded and no variance flags.
+1. Report markers: emit the `report_mode` marker + one `kind=warning` marker per subagent failure and per `high_variance: true` operation at the top
 2. Executive Summary: Max ~20 lines.
 3. Performance plot: The {{PERF_PLOT}} placeholder is replaced by Step 12.3 with a base64-embedded
    PNG data URI (![Performance Breakdown](data:image/png;base64,...)) of a single horizontal stacked
@@ -40,10 +40,7 @@ section that has STANDALONE / COMPARATIVE variants. Delete the unused variant.
    exists (number sequentially from P1, including CPU/Idle first if invoked).
 6. Each section is independently composable -- can be shared standalone.
 7. All three tiers (Compute, Kernel Fusion, System) use separate sequential P1/P2/P3 numbering (no gaps).
-8. Priority icons are assigned by PRIORITY NUMBER, not severity:
-   - Compute Kernel: 🔴 P1 → 🟡 P2 → 🟢 P3 → 🟢 P4 ...
-   - Kernel Fusion: icon by confidence (🔴 high → 🟡 medium → 🟢 low), not priority number
-   - System-Level: 🔴 P1 → 🟡 P2 → 🟢 P3 → 🟢 P4 ... (only when actionable issues exist)
+8. Priority icons are assigned by PRIORITY NUMBER, not severity, in every section (Compute Kernel, Kernel Fusion, System-Level): 🔴 P1 → 🟡 P2 → 🟢 P3 → 🟢 P4 ... (System-Level only when actionable issues exist)
 9. Field labels — each section uses EXACTLY these labels:
 
    OPTIMIZATION CARDS (§Compute Kernel Optimizations, §Kernel Fusion, §System-Level):
@@ -53,7 +50,7 @@ section that has STANDALONE / COMPARATIVE variants. Delete the unused variant.
 
    DETAILED ANALYSIS (§Detailed Analysis only):
    - Compute / System blocks: **Identification:** / **Data:** / **Reasoning for Slowdown:** / **Resolution:** / **Impact estimate:**
-   - Kernel Fusion blocks:    **Identification:** / **Data:** / **Impact estimate:**
+   - Kernel Fusion blocks:    **Identification:** / **Data:** / **Resolution:** / **Impact estimate:**
 
 10. Detailed Analysis: three subsections (`### Compute Kernel Insights`, `### Kernel Fusion Insights`, `### System-Level Insights`) with `#### 🔴/🟡/🟢 Pn: <Brief Title>` blocks matching card titles and order.
 11. Model and appendix: Use `model_info["model"]` from `metadata/model_info.json` for the
@@ -63,18 +60,37 @@ section that has STANDALONE / COMPARATIVE variants. Delete the unused variant.
     the library name(s) in parentheses when present in the sub-agent findings. Omit when no
     library is identified. System-Level and Kernel Fusion titles do NOT include a library
     parenthetical.
+13. Multi-trace standalone (`multi_trace` scope): use the STANDALONE
+    blocks. Impact scores are a percent of the combined time of all jobs. Compute P-items carry their
+    phase. Fusion and System sections cover the focus job only and open with a scope line.
 -->
 
 <!-- === STANDALONE title === -->
 # <Model> - <Platform> Standalone Analysis
+<!-- report-begin kind=report_mode mode=agentic -->
+<!-- report-end -->
 
 <!-- === COMPARATIVE title === -->
 # <Model> - Comparative Analysis: <Platform1> vs <Platform2>
+<!-- report-begin kind=report_mode mode=comparative -->
+<!-- report-end -->
+
+<!-- Warning markers (one per flagged item). Omit entirely if nothing flagged. -->
+
+<!-- report-begin kind=warning -->
+> **⚠ Analysis incomplete.** Excluded from recommendations (script failures):
+> - <name> (<tier>) — <brief error>
+<!-- report-end -->
+
+<!-- report-begin kind=warning -->
+> **⚠ Data Quality.** Unreliable kernel-time (CoV > 1.0, extreme variance across instances):
+> - <name> (<category>) — CoV X.X
+<!-- report-end -->
 
 ## Executive Summary
 
 <!-- === STANDALONE Executive Summary === -->
-[1 paragraph overview + key metrics table]
+[1 paragraph overview + key metrics table. multi_trace: Total Time is the combined time; add one sentence giving each phase's time, summed over its jobs in `gpu_utilization.jobs`.]
 
 <!-- MANDATORY: This table must contain exactly these 5 rows:
      Total Time | Compute % | Idle % | Exposed Communication % | Top Bottleneck Category
@@ -103,28 +119,6 @@ section that has STANDALONE / COMPARATIVE variants. Delete the unused variant.
 
 {{PERF_PLOT}}
 
-## Warnings
-
-**Include this section ONLY if any subagent failed OR any operation has high_variance: true in *_metrics.json:**
-
-<!-- Subagent failures (if any): -->
-The following analyses could not be completed due to script failures:
-
-| Analysis | Tier | Error Summary |
-|----------|------|---------------|
-| <name> | System / Compute Kernel | <brief error description> |
-
-These are excluded from the recommendations below.
-
-<!-- Data quality warnings (if any operation has high_variance: true in *_metrics.json): -->
-**Data Quality:** The following operations have unreliable kernel time measurements (CoV > 1.0, indicating extreme variance across instances — likely a profiler timing artifact):
-
-| Operation | Category | CoV | Reported Time (ms) |
-|-----------|----------|-----|-------------------|
-| <name> | <category> | X.X | Y.Y |
-
----
-
 ## Compute Kernel Optimizations
 
 Findings from per-category kernel analysis (GEMM, SDPA, elementwise, etc.).
@@ -135,6 +129,9 @@ Summaries of recommendations from Step 8 sub-agents, focused on individual kerne
 One row per entry in `priority_data.json::priorities[]`, in array order (no manifest-sort, no extra rows). For row N (= `priorities[N-1]`): `Rank`/`Category` = `rank`/`display_name`; `Time (ms)` = matching `manifest.categories[].gpu_kernel_time_ms` (verbatim); `Ops` = matching `manifest.categories[].ops_count`; `% of Compute Time` = `Time (ms) / (gpu_utilization.total_time_ms * computation_time_percent / 100)`; trailer `low`/`high` = `priorities[N-1].impact_score_low`/`impact_score_high` (use `null` for `source: "manifest_fallback"`). Wrap the whole block (header + separator + rows) in the `kind=top_ops` marker.
 
 <!-- === STANDALONE Top Operations === -->
+<!-- === MULTI_TRACE Top Operations: add this line above the standalone table, outside the marker. Phase names are the distinct `phase` values in gpu_utilization.jobs === -->
+_Times and percentages are summed across all phases (<phase_1> + <phase_2>). See each P-item's Phase field for where the time is spent._
+
 <!-- impact-begin kind=top_ops -->
 | Rank | Category | Time (ms) | % of Compute Time | Ops |
 |------|----------|-----------|-------------------|-----|
@@ -158,15 +155,18 @@ One row per entry in `priority_data.json::priorities[]`, in array order (no mani
 <!-- Icon mapping by PRIORITY NUMBER (not severity): P1=🔴, P2=🟡, P3+=🟢 -->
 <!-- One card per entry in priority_data.findings[] in array order. Title uses the entry's category and library; Action text is category-appropriate. Do NOT recommend "fuse the SDPA kernel" (already fused — defer upstream/downstream fusion to Kernel Fusion section). -->
 <!-- Skip categories that have empty category_findings[] in category_data/<cat>_metrics.json (no P-items for that category). -->
+<!-- The **Phase** line and `phase=` appear only when the finding has a phase. -->
 <!-- Heuristic findings (priority_data.findings[i].estimate_method == "heuristic") carry a numeric estimated impact and sort by impact_score like any other compute finding; render per sub_agent_spec.md § Heuristic findings. -->
 
 ### 🔴 P1: <Brief Title> (<Library>)
+
+**Phase**: <priority_data.findings[0].phase>
 
 **Insight**: [1 sentence - what's wrong]
 
 **Action**: [1-2 sentences - category-appropriate: GEMM fusion/tile/library; SDPA tile/backend; elementwise fusion; etc.]
 
-<!-- impact-begin kind=p_item category=<priority_data.findings[0].category> low=<priority_data.findings[0].impact_score_low> mid=<priority_data.findings[0].impact_score> high=<priority_data.findings[0].impact_score_high> -->
+<!-- impact-begin kind=p_item category=<priority_data.findings[0].category> low=<priority_data.findings[0].impact_score_low> mid=<priority_data.findings[0].impact_score> high=<priority_data.findings[0].impact_score_high> phase=<priority_data.findings[0].phase> -->
 **Impact**: [impact_score: X.X, OR "Not quantifiable from trace data"]
 <!-- impact-end -->
 
@@ -180,7 +180,7 @@ One row per entry in `priority_data.json::priorities[]`, in array order (no mani
 
 **Action**: [1-2 sentences]
 
-<!-- impact-begin kind=p_item category=<priority_data.findings[1].category> low=<priority_data.findings[1].impact_score_low> mid=<priority_data.findings[1].impact_score> high=<priority_data.findings[1].impact_score_high> -->
+<!-- impact-begin kind=p_item category=<priority_data.findings[1].category> low=<priority_data.findings[1].impact_score_low> mid=<priority_data.findings[1].impact_score> high=<priority_data.findings[1].impact_score_high> phase=<priority_data.findings[1].phase> -->
 **Impact**: [impact_score: X.X, OR "Not quantifiable from trace data"]
 <!-- impact-end -->
 
@@ -194,7 +194,7 @@ One row per entry in `priority_data.json::priorities[]`, in array order (no mani
 
 **Action**: [1-2 sentences]
 
-<!-- impact-begin kind=p_item category=<priority_data.findings[2].category> low=<priority_data.findings[2].impact_score_low> mid=<priority_data.findings[2].impact_score> high=<priority_data.findings[2].impact_score_high> -->
+<!-- impact-begin kind=p_item category=<priority_data.findings[2].category> low=<priority_data.findings[2].impact_score_low> mid=<priority_data.findings[2].impact_score> high=<priority_data.findings[2].impact_score_high> phase=<priority_data.findings[2].phase> -->
 **Impact**: [impact_score: X.X, OR "Not quantifiable from trace data"]
 <!-- impact-end -->
 
@@ -206,14 +206,16 @@ One row per entry in `priority_data.json::priorities[]`, in array order (no mani
 
 ## Kernel Fusion Opportunities (Experimental)
 <!-- === STANDALONE Kernel Fusion === -->
-> **Note:** Kernel fusion analysis is experimental. impact_score projections estimate the recoverable fraction of E2E with 85% memory/compute pipeline overlap. Kernels without perf models use their measured trace time as-is. Candidates where fewer than 75% of kernels have perf models are not reported. Actual recoverable time depends on implementation feasibility and interaction effects.
+> **Note:** Kernel fusion analysis is experimental. impact_score projections estimate the recoverable fraction of E2E with <kernel_fusion_metrics.overlap_efficiency as a percent> memory/compute pipeline overlap. Kernels without perf models use their measured trace time as-is. Candidates are not reported unless at least 50% of their kernels have perf models (75% for candidates of 5 or more kernels). Actual recoverable time depends on implementation feasibility and interaction effects.
+<!-- === MULTI_TRACE scope line (after the note; the same line goes under the System-Level note) === -->
+Scope: <focus_job> only (trace `<focus trace>`, capture `<manifest.capture_folder or raw>`)
 <!-- === COMPARATIVE Kernel Fusion === -->
 > **Note:** Kernel fusion analysis is experimental.
 
 <!-- Populate from system_findings/kernel_fusion_findings.md if kernel_fusion category exists in manifest. -->
 <!-- Each finding uses Insight / Action / Impact / Confidence format, with Impact from kernel_fusion_metrics.json. -->
-<!-- P1/P2/P3+ ordered by confidence then kernel time. -->
-<!-- Icon mapping by CONFIDENCE (not priority number): 🔴 high → 🟡 medium → 🟢 low. -->
+<!-- P1/P2/P3+ ordered by impact_score, highest first. -->
+<!-- Icon mapping by PRIORITY NUMBER (not severity): P1=🔴, P2=🟡, P3+=🟢 -->
 <!-- If no findings or kernel_fusion category not in manifest, replace the cards below with: "No kernel fusion opportunities detected." -->
 
 ### 🔴 P1: <Candidate Name>
@@ -270,6 +272,7 @@ One row per entry in `priority_data.json::priorities[]`, in array order (no mani
 
 > **Note:** System-level analysis is exploratory. The patterns and recommendations below are under active development and may be refined as system-level analysis matures.
 
+<!-- === MULTI_TRACE: add the scope line from Kernel Fusion here === -->
 <!-- === COMPARATIVE system-level note === -->
 <!-- In comparative mode, add this note immediately after the blockquote above: -->
 <!-- > **Comparative Note:** System-level analysis is performed on the primary trace (Trace 1) only. Cross-trace system-level comparison is not yet supported. -->
@@ -356,6 +359,7 @@ communication/compute overlap). These affect the GPU pipeline as a whole.
 <a id="detailed-analysis-compute-p1"></a>
 <!-- reasoning-candidate tier=compute rank=1 -->
 #### 🔴 P1: <Brief Title> (<Library>)
+**Phase**: <priority_data.findings[0].phase>
 **Identification:**
 **Data:**
 
@@ -406,47 +410,47 @@ communication/compute overlap). These affect the GPU pipeline as a whole.
 
 ### Kernel Fusion Insights
 <!-- === STANDALONE Kernel Fusion === -->
-> **Note:** Kernel fusion analysis is experimental. impact_score projections estimate the recoverable fraction of E2E with 85% memory/compute pipeline overlap. Kernels without perf models use their measured trace time as-is. Actual recoverable time depends on implementation feasibility and interaction effects.
+> **Note:** Kernel fusion analysis is experimental. impact_score projections estimate the recoverable fraction of E2E with <kernel_fusion_metrics.overlap_efficiency as a percent> memory/compute pipeline overlap. Kernels without perf models use their measured trace time as-is. Actual recoverable time depends on implementation feasibility and interaction effects.
 <!-- === COMPARATIVE Kernel Fusion === -->
 > **Note:** Kernel fusion analysis is experimental.
 
-<!-- Paste reasoning blocks from kernel_fusion_findings.md, ordered by confidence then kernel time (matching card order). -->
-<!-- Each block uses three required labels: **Identification:**, **Data:**, **Impact estimate:** -->
+<!-- Paste reasoning blocks from kernel_fusion_findings.md, ordered by impact_score, highest first (matching card order). -->
+<!-- Comparative: replace the single Data table with a **Trace 1** (E2E <ms> ms) table and a **Trace 2** (E2E <ms> ms) table. -->
 <!-- If kernel_fusion category is not in the manifest or findings are empty, show "No fusion impact estimates available." -->
 
 <a id="detailed-analysis-fusion-P1"></a>
 <!-- reasoning-candidate tier=fusion rank=1 -->
-#### 🔴/🟡/🟢 P1: <Candidate Name> (<time_ms> ms, <instance_count> instances)
+#### 🔴 P1: <Candidate Name>
 
 **Identification:**
 
 **Data:**
 
-| Kernel | Type | Duration (us) | Perf model |
-|--------|------|--------------|------------|
-| <kernel name (truncated to ~60 chars)> | <type> | X.X | Yes/No |
+| Operation | Args | Kernel Path | Kernel Name | Time (ms) | %E2E | Count | FLOPS/Byte | Efficiency | Bound |
+|---|---|---|---|---|---|---|---|---|---|
+| <op> | <args> | <kernel path> | <kernel name (truncated)> | X.XXX | X.XX | N | X.XX | X.XX% of Y TFLOPS/TB/s | compute/memory-bound |
+
+**Resolution:**
 
 **Impact estimate:**
 
 <a id="detailed-analysis-fusion-P2"></a>
 <!-- reasoning-candidate tier=fusion rank=2 -->
-#### 🔴/🟡/🟢 P2: <Candidate Name> (<time_ms> ms, <instance_count> instances)
-
+#### 🟡 P2: <Candidate Name>
 **Identification:**
-
 **Data:**
-
-| Kernel | Type | Duration (us) | Perf model |
-|--------|------|--------------|------------|
-| <kernel name (truncated to ~60 chars)> | <type> | X.X | Yes/No |
-
+**Resolution:**
 **Impact estimate:**
 
 <a id="detailed-analysis-fusion-P3"></a>
 <!-- reasoning-candidate tier=fusion rank=3 -->
-#### 🔴/🟡/🟢 P3: <Candidate Name> (<time_ms> ms, <instance_count> instances)
+#### 🟢 P3: <Candidate Name>
+**Identification:**
+**Data:**
+**Resolution:**
+**Impact estimate:**
 
-*Repeat the same Identification + Data + Impact estimate format for each candidate, with anchors `detailed-analysis-fusion-PN`.*
+<!-- Repeat for P4 onward with anchor detailed-analysis-fusion-PN. -->
 
 ### System-Level Insights
 
@@ -495,7 +499,7 @@ communication/compute overlap). These affect the GPU pipeline as a whole.
 
 ### Hardware Reference
 - **Platform**: <platform>
-- **Peak HBM BW**: X TB/s
+- **Peak Memory BW**: X TB/s
 - **Peak MAF (BF16)**: Y TFLOPS
 - **Peak MAF (FP8)**: Z TFLOPS (if supported)
 - **Peak MAF (FP4)**: W TFLOPS (if supported)
